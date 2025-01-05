@@ -27,11 +27,9 @@ CORS(app)
 # Load environment variables once
 load_dotenv()
 gemini_key = os.getenv('gemini_key')
-qdrant_key = os.getenv('qdrant_key_old')
-# new url
-url="https://d508995c-b590-4046-a6cb-75dac0ce258d.us-west-2-0.aws.cloud.qdrant.io"
-# old url
-url='https://5d9673e8-d966-4738-adbb-95a5842604ba.europe-west3-0.gcp.cloud.qdrant.io'
+qdrant_key = os.getenv('qdrant_key')
+qdrant_url = os.getenv('qdrant_url')
+
 # Global variables for components
 vector_db = None
 llm_handler = None
@@ -48,37 +46,49 @@ def initialize_components():
     """
     global vector_db, llm_handler, qa_chain
     
-    logger.info("🔄 Initializing components...")
-    
-    # Initialize vector database
-    if vector_db is None:
+    try:
+        logger.info("🔄 Initializing components...")
+        
+        # Load environment variables
+        load_dotenv()
+        gemini_key = os.getenv('gemini_key')
+        qdrant_key = os.getenv('qdrant_key')
+        qdrant_url = os.getenv('qdrant_url')
+        
+        if not all([gemini_key, qdrant_key, qdrant_url]):
+            raise ValueError("Missing required environment variables")
+        
+        # Initialize components
         vector_db = VectorDatabase(
             model_name="hiieu/halong_embedding",
             collection_name='cmc_final_db',
             api=qdrant_key,
-            url=url
+            url=qdrant_url
         )
         logger.info("✅ Vector database initialized")
-    
-    # Initialize LLM handler
-    if llm_handler is None:
-        llm_handler = LLMHandler(
-            model_name="gemini-1.5-flash", 
-            gemini_key=gemini_key
-        )
-        logger.info("✅ LLM handler initialized")
-    
-    # Initialize QA chain
-    if qa_chain is None:
-        qa_chain = QuestionAnsweringChain(
-            llm_handler=llm_handler,
-            vector_db=vector_db,
-            num_docs=5,
-            apply_rerank=True,
-            apply_rewrite=True,
-            date_impact=0.001
-        )
-        logger.info("✅ QA chain initialized")
+        
+        # Initialize LLM handler
+        if llm_handler is None:
+            llm_handler = LLMHandler(
+                model_name="gemini-1.5-flash", 
+                gemini_key=gemini_key
+            )
+            logger.info("✅ LLM handler initialized")
+        
+        # Initialize QA chain
+        if qa_chain is None:
+            qa_chain = QuestionAnsweringChain(
+                llm_handler=llm_handler,
+                vector_db=vector_db,
+                num_docs=5,
+                apply_rerank=True,
+                apply_rewrite=True,
+                date_impact=0.001
+            )
+            logger.info("✅ QA chain initialized")
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize components: {str(e)}")
+        raise
 
 def switch_collection(collection_name):
     global vector_db, llm_handler, qa_chain

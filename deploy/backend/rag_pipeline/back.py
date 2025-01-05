@@ -9,6 +9,9 @@ from langchain_qdrant import QdrantVectorStore
 from langchain_core.runnables import RunnableLambda
 from langchain_core.documents import Document
 from datetime import datetime
+from qdrant_client import QdrantClient
+from qdrant_client.http.models import Filter, FieldCondition, MatchValue
+from qdrant_client.http.models import VectorParams, Distance
 
 def get_months_since_reference(date_str, reference_date="2024-11"):
     """
@@ -67,18 +70,29 @@ class LLMHandler:
         return self.llm
 
 class VectorDatabase:
-    def __init__(self, model_name: str, collection_name: str, api: str, url : str):
+    def __init__(self, model_name: str, collection_name: str, api: str, url: str):
         self.embeddings = HuggingFaceEmbeddings(model_name=model_name)
         self.collection_name = collection_name
         self.api = api
-        self.url=url
+        self.url = url
+        self.client = QdrantClient(url=self.url, api_key=self.api)
+        self._initialize_collection()
         self.db = self.load_db()
+        
+    def _initialize_collection(self):
+        """Ensure collection exists, create if it doesn't"""
+        if not self.client.collection_exists(self.collection_name):
+            self.client.create_collection(
+                collection_name=self.collection_name,
+                vectors_config=VectorParams(size=768, distance=Distance.COSINE),
+            )
+            print(f"Created new collection: {self.collection_name}")
         
     def load_db(self):
         return QdrantVectorStore.from_existing_collection(
             embedding=self.embeddings,
             collection_name=self.collection_name,
-            url = self.url,
+            url=self.url,
             api_key=self.api
         )
     def get_retriever(self):
