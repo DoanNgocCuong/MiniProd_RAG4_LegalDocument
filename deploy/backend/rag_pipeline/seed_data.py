@@ -8,6 +8,7 @@ from langchain_core.documents import Document
 import pandas as pd
 from time import sleep
 import json
+import os
 
 class SemanticChunking:
     def __init__(self, min_token=50, max_token=350, model_name="hiieu/halong_embedding"):
@@ -193,9 +194,8 @@ def list_collections(url , api_key):
 if __name__=='__main__':
     from dotenv import load_dotenv
     import os
-    url='https://5d9673e8-d966-4738-adbb-95a5842604ba.europe-west3-0.gcp.cloud.qdrant.io'
-    load_dotenv()
-    qdrant_key = os.getenv('qdrant_key_old')
+    url = os.getenv('qdrant_url')
+    qdrant_key = os.getenv('qdrant_key')
     print(list_collections(api_key=qdrant_key, url=url))
     # docs=read_document_json('data/raw/companyA.json')
     # print(docs)
